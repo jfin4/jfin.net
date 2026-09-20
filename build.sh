@@ -19,15 +19,14 @@ code_bg='#f0f0f0'
 rm -rf $production_dir/*
 
 # make favicon -----------------------------------------------------------------
-# Write the favicon as a real SVG file (more reliable than
-# data URI on iOS/Safari)
+# write file
 cat > "$production_dir/favicon.svg" << EOF
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <text y=".9em" font-size="90">$favicon_text</text>
 </svg>
 EOF
 
-# Reference the real file + apple-touch-icon for iOS compatibility
+# reference file
 cat > /tmp/favicon.h << EOF
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/favicon.svg">
