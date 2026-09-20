@@ -9,7 +9,7 @@
 
 # define variables -------------------------------------------------------------
 entries_dir="$(dirname $0)/content"
-production_dir="/tmp/jfin.net"
+production_dir='/tmp/jfin.net'
 font_size='20px'
 banner_text='John Inman'
 favicon_text='🐩'
