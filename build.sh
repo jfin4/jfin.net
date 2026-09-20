@@ -29,13 +29,13 @@ cat > "$production_dir/favicon.svg" << EOF
 EOF
 
 # Reference the real file + apple-touch-icon for iOS compatibility
-cat > /tmp/favicon.h << 'EOF'
+cat > /tmp/favicon.h << EOF
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/favicon.svg">
 EOF
 
 # load google fonts ------------------------------------------------------------
-cat > /tmp/googlefonts.h << 'EOF'
+cat > /tmp/googlefonts.h << EOF
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&family=Source+Code+Pro&display=swap" rel="stylesheet">
@@ -77,5 +77,7 @@ for dir in $(ls -d $entries_dir/*); do
 done
 
 # make toc ---------------------------------------------------------------------
-printf '<table>%s</table>\n' "$entries"\
-  | my_pandoc --metadata title="$banner_text" -o $production_dir/index.html
+my_pandoc -o $production_dir/index.html << EOF
+<h1>$banner_text</h1>
+<table>$entries</table>
+EOF
