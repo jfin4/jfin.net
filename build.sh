@@ -9,7 +9,6 @@
 
 # define variables -------------------------------------------------------------
 entries_dir="$(dirname $0)/content"
-# production_dir='/var/www/htdocs/jfin.net'
 production_dir="/tmp/jfin.net"
 font_size='20px'
 banner_text='John Inman'
@@ -58,7 +57,6 @@ my_pandoc() {
 
 # render entries ---------------------------------------------------------------
 entries=
-# LC_COLLATE=C to sort by (reverse) ascii
 for dir in $(ls -dr $entries_dir/*); do
   source=$(ls $dir/*.md 2> /dev/null) 
   [ -f "$source" ] || continue
@@ -77,7 +75,8 @@ for dir in $(ls -dr $entries_dir/*); do
 done
 
 # make toc ---------------------------------------------------------------------
-my_pandoc -f html -o $production_dir/index.html << EOF
+cat > '/tmp/John Inman.html' << EOF
 <h1>$banner_text</h1>
 <table>$entries</table>
 EOF
+my_pandoc -f html -o $production_dir/index.html '/tmp/John Inman.html'
