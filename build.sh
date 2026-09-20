@@ -46,18 +46,17 @@ my_pandoc() {
     --standalone\
     --include-in-header=/tmp/favicon.h\
     --include-in-header=/tmp/googlefonts.h\
-    --mathjax\
+    --math-method=mathjax\
     -V mainfont='Source Sans Pro, sans-serif'\
     -V monofont='Source Code Pro, monospace'\
     -V fontsize=$font_size\
     -V monobackgroundcolor=$code_bg\
     "$@"
-    # --math-method=mathjax \ # pandoc >= 3.11
 }
 
 # render entries ---------------------------------------------------------------
 entries=
-for dir in $(ls -dr $entries_dir/*); do
+for dir in $(LC_COLLATE=C ls -dr $entries_dir/*); do
   source=$(ls $dir/*.md 2> /dev/null) 
   [ -f "$source" ] || continue
 
