@@ -4,134 +4,110 @@
 
 2026-09-20
 
-[Author's note: all em-dashes are my own.]
+## Introduction
 
-## Goal
+I would like to host a personal website on a home server running OpenBSD from
+behind a carrier-grade NAT (CGN). The problem is that pointing a custom domain
+name to a home server requires a public IP address; fixed wireless ISPs
+(WISP), who bounce signal to otherwise hard to reach customers, often
+translate a single, public IP adress to many private, customer IPs via CGN.
+I could point a domain name to the WISP's public IP, but the WISP would
+have no way of knowing which private IP to route the request to.
 
-The goal of this project is to serve a personal website from a home.
+A Cloudflare tunnel solves this problem. Instead of pointing a domain name
+directly to the server, it points to Cloudflare instead. Cloudflare then
+passes the request on to the server. It is able to do this because 1) I have
+told the domain registrar to use Cloudflare's DNS servers, and 2) I have
+created a tunnel to Cloudflare by running a persistent `cloudflared` process
+on the server.
 
-## Constraints
+A caveat: OpenBSD is not officially supported by the Cloudflare tunnel client.
+That's okay. It's an open-source project written in Go and can be minimally
+patched to build on OpenBSD.
 
-1. Small (no) budget
-2. Server must run OpenBSD
-3. Home network is behind a carrier-grade NAT (CGN)
+## Requirements
 
-## Approach
+1. An old laptop
+2. A domain name
+3. A (free) Cloudflare account
 
-The budget for this project is small to non-existent. Fortunately, the
-necessary components have accreted over time due to a consistency of interests
-and the sustained passage of time: I have in my possession an old Lenovo T440s
-laptop, once a prized possession, now thicker and less refined than I
-remember, that nontheless offers an energy efficient x86 cpu and ethernet
-port; a custom domain rented from the registrar for the equivalent of bus fare
-every month; and an internet connection I pay dearly for, but am nonethesless
-grateful for, it being my connection to the office 3 days a week in a place
-where I can barely hear road noise. 
+## Steps
 
-### OpenBSD
+1. Download cloudflared patches. [Ilya
+   Voronin](https://github.com/ivoronin/openbsd-port-cloudflared) has already
+   done the hard work (thank you). The patch instructions target the OpenBSD
+   ports tree; working with ports seems to require X11 (?). This is a headless
+   server, so I just borrowed the patches and downloaded the cloudflared
+   source directly. 
 
-I first heard of OpenBSD from my boss---he was well into his current career as
-an [agister](https://www.google.com/search?q=define+agister). His past career,
-I'm not sure how many there had been, had been in "tech". He still freelanced.
-Once he left his laptop open on a table in the barn. The screen was full of
-deliberately indented dollars signs, curly brackets, and letters, most of
-which hinted at but did not spell actual words. I was quite enchanted. I would
-ask him for stories about the machines called computers. He told me the
-requisite stories about punch cards. He also told me about OpenBSD. He used to
-work in security. OpenBSD was INSANE about security. This gave it an aura of a
-mythical bronco. If somehow you could tame the beast, and ride it...unlimited
-powers would be yours. 
+2. Download cloudflared source.  Note that, at the time I downloaded the
+   patches they were targetting the [2026.7.0 cloudflared
+   release](https://github.com/cloudflare/cloudflared/archive/refs/tags/2026.7.0.tar.gz).
 
-It is somewhat surprising that OpenBSD is actually one of the sturdiest and
-most straightforward open source operating systems you can use---if it
-supports your hardware... and software. I don't have a practical need for it.
-I use it because it's polish is a sure sign that someone put care into, and it
-is a joy to use. And I trust it to sit unattended on my server and
-run...indefinitely...without intervention. (So far, so good, except when the
-power goes out). 
+3. Apply the patches:
 
-### Fixed Wireless and CGN
+   ```
+   patch -p0 < patch-diagnostic_network_collector_unix_go
+   patch -p0 < patch-Makefile
+   patch -p0 < patch-diagnostic_system_collector_openbsd_go
+   ```
 
-But there is always a price, and today the price is that we must tunnel
-through a CGN. My ISP bounces signal to my house from a hill top a couple
-miles away. That device on the hill has a public IP address. I do not. My ISP
-generously offered a static IP at $10/mo. (they are limited and costly to
-obtain, to be sure) but, most helpfully, also told me about Cloudflared
-tunnels. The catch, Cloudflared is not _officially_ supported on OpenBSD. But
-this is open source software, and I have Claude.
+   Also note, these patches are no longer sufficient for the current release
+   (Cloudflare devs seem quite active). 
 
-### Cloudflared
+4. Once patched, it can be built and installed. Note, [cloudflared
+   requires](https://github.com/cloudflare/cloudflared#requirements) GNU make
+   (as well as capnproto and, obviously, go) so we use `gmake` instead of the
+   `make` that comes with OpenBSD. 
 
-Behold, [ivoronin](https://github.com/ivoronin/openbsd-port-cloudflared) has
-been up to much of the same and has developed some patches for (2026.7.0)
-Cloudflared. For whatever reason, it is setup as an unofficial port entry,
-and, for whatever reason, the X11 window system was a dependency for working
-with ports, which did not suite my headless server, so I downloaded the
-[pinned release](https://github.com/cloudflare/cloudflared/archive/refs/tags/2026.7.0.tar.gz), 
-borrowed his
-[patches](https://github.com/ivoronin/openbsd-port-cloudflared/tree/main/patches)
-and applied them myself:
+   ```
+   gmake cloudflared
+   install -m 755 cloudflared /usr/local/bin/cloudflared
+   ```
 
-```
-patch -p0 < patch-diagnostic_network_collector_unix_go
-patch -p0 < patch-Makefile
-patch -p0 < patch-diagnostic_system_collector_openbsd_go
-```
+5. Set up the tunnel.
 
-That last one is quite long and it would be interesting to know exactly what
-is going on there. Interestingly, these patches are insufficient to build the
-latest release; it seems the Cloudflare team has been busy adding new
-features...that also need to be patched to run on OpenBSD. Saving for a rainy
-day...
+   ```
+   cloudflared tunnel login
+   cloudflared tunnel create <TUNNEL NAME>
+   cloudflared tunnel route dns <TUNNEL NAME> <YOUR DOMAIN>
+   ```
 
-Once patched, it can be built (using gmake!), and installed:
+   To make persistent, edit `/etc/rc.d/cloudflared`:
 
-```
-gmake cloudflared
-install -m 755 cloudflared /usr/local/bin/cloudflared
-```
+   ```
+   #!/bin/ksh
 
-No run with
+   daemon="/usr/local/bin/cloudflared"
+   daemon_flags="tunnel --config /etc/cloudflared/config.yml run"
+   daemon_user="<USER>"
 
-```
-cloudflared tunnel login
-cloudflared tunnel create <tunnel>
-cloudflared tunnel route dns <tunnel> <domain>
-```
+   . /etc/rc.d/rc.subr
 
-Edit `/etc/rc.d/cloudflared` to make persistent:
+   rc_bg=YES
+   rc_reload=NO
 
+   rc_cmd $1
 
-```
-#!/bin/ksh
+   ```
 
-daemon="/usr/local/bin/cloudflared"
-daemon_flags="tunnel --config /etc/cloudflared/config.yml run"
-daemon_user="jfin"
+   and enable/start:
+   
+   ```
+   chmod +x /etc/rc.d/cloudflared
+   rcctl enable cloudflared
+   rcctl start cloudflared
+   ```
 
-. /etc/rc.d/rc.subr
+6. Update the registrar (in theis case, Namecheap) to use the nameservers
+   provided by Cloudflare.
 
-rc_bg=YES
-rc_reload=NO
-
-rc_cmd $1
-
-```
-
-and run:
-
-```
-chmod +x /etc/rc.d/cloudflared
-rcctl enable cloudflared
-rcctl start cloudflared
-```
-
-Finally, there is some dashboarding to with a (free) Cloudflare account. 
-Change nameserver in your registrar setting (in my case, Namecheap), and tell
-Cloudflare to always use HTTPS (under Cloudflare Edge Certificates).
+7. Bonus: tell Cloudflare to always use HTTPS (the option is under the
+   Cloudflare Edge Certificates of the Cloudflare dashboard's navigation
+   panel).
 
 ## Conclusion
 
-If you are reading this, it is working.
+If you are reading this, it is working 😉.
 
 [Edit this page on GitHub](https://github.com/jfin4/jfin.net/edit/main/content/2026-09-20/home-server.md)
