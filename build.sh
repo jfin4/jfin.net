@@ -10,7 +10,6 @@
 # define variables -------------------------------------------------------------
 entries_dir="$(dirname $0)/content"
 production_dir='/var/www/htdocs/jfin.net'
-# production_dir="/tmp/jfin.net"
 font_size='20px'
 banner_text='John Inman'
 favicon_text='🐩'
@@ -20,22 +19,21 @@ code_bg='#f0f0f0'
 rm -rf $production_dir/*
 
 # make favicon -----------------------------------------------------------------
-# Write the favicon as a real SVG file (more reliable than
-# data URI on iOS/Safari)
+# write file
 cat > "$production_dir/favicon.svg" << EOF
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <text y=".9em" font-size="90">$favicon_text</text>
 </svg>
 EOF
 
-# Reference the real file + apple-touch-icon for iOS compatibility
-cat > /tmp/favicon.h << 'EOF'
+# reference file
+cat > /tmp/favicon.h << EOF
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/favicon.svg">
 EOF
 
 # load google fonts ------------------------------------------------------------
-cat > /tmp/googlefonts.h << 'EOF'
+cat > /tmp/googlefonts.h << EOF
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&family=Source+Code+Pro&display=swap" rel="stylesheet">
@@ -53,13 +51,11 @@ my_pandoc() {
     -V fontsize=$font_size\
     -V monobackgroundcolor=$code_bg\
     "$@"
-    # --math-method=mathjax \ # pandoc >= 3.11
 }
 
 # render entries ---------------------------------------------------------------
 entries=
-# LC_COLLATE=C to sort by (reverse) ascii
-for dir in $(ls -d $entries_dir/*); do
+for dir in $(LC_COLLATE=C ls -dr $entries_dir/*); do
   source=$(ls $dir/*.md 2> /dev/null) 
   [ -f "$source" ] || continue
 
@@ -77,5 +73,8 @@ for dir in $(ls -d $entries_dir/*); do
 done
 
 # make toc ---------------------------------------------------------------------
-printf '<table>%s</table>\n' "$entries"\
-  | my_pandoc --metadata title="$banner_text" -o $production_dir/index.html
+cat > '/tmp/John Inman.html' << EOF
+<h1>$banner_text</h1>
+<table>$entries</table>
+EOF
+my_pandoc -f html -o $production_dir/index.html '/tmp/John Inman.html'
