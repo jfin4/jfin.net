@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ksh
 
 # Microscopic static site generator built around Pandoc. Provides a TOC
 # landing page and an arbitrary number of entry pages. Makes assumptions
@@ -14,6 +14,8 @@ font_size='20px'
 banner_text='John Inman'
 favicon_text='🐩'
 code_bg='#f0f0f0'
+font="Source Sans Pro"
+mono="JetBrains Mono"
 
 # start fresh ------------------------------------------------------------------
 rm -rf $production_dir/*
@@ -33,10 +35,13 @@ cat > /tmp/favicon.h << EOF
 EOF
 
 # load google fonts ------------------------------------------------------------
+font_url=$(echo $font | tr ' ' '+')
+mono_url=$(echo $mono | tr ' ' '+')
 cat > /tmp/googlefonts.h << EOF
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&family=Source+Code+Pro&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=$font_url&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=$mono_url&display=swap" rel="stylesheet">
 EOF
 
 # configure pandoc -------------------------------------------------------------
@@ -47,7 +52,7 @@ my_pandoc() {
     --include-in-header=/tmp/googlefonts.h\
     --mathjax\
     -V mainfont='Source Sans Pro, sans-serif'\
-    -V monofont='Source Code Pro, monospace'\
+    -V monofont='JetBrains Mono, monospace'\
     -V fontsize=$font_size\
     -V monobackgroundcolor=$code_bg\
     "$@"
